@@ -71,43 +71,47 @@
       const oldChildren = n1.children || []
       const newChildren = n2.children || []
       // string
-      if (typeof oldChildren === 'string' && typeof newChildren === 'string') {
-        if (oldChildren !== newChildren) {
-          n1.el.textContent = newChildren
+      if (typeof oldChildren === 'string') {
+        if (typeof newChildren === 'string') {
+          if (oldChildren !== newChildren) {
+            n1.el.textContent = newChildren
+          }
+        } else if (Array.isArray(newChildren)) {
+          n1.el.textContent = ''
+          newChildren.forEach((child) => {
+            moutn(child, n1.el)
+          })
         }
         return
-      } else if (typeof oldChildren === 'string' && Array.isArray(newChildren)) {
-        n1.el.textContent = ''
-        newChildren.forEach((child) => {
-          moutn(child, n1.el)
-        })
-      } else if (Array.isArray(oldChildren) && typeof newChildren === 'string') {
-        n1.el.textContent = newChildren
-        n1.el.innerHTML = ''
-      }
+      } else if (Array.isArray(oldChildren)) {
+        if (typeof newChildren === 'string') {
+          n1.el.textContent = newChildren
+          n1.el.innerHTML = ''
+        } else {
+          // array
+          const commonLength = Math.min(oldChildren.length, newChildren.length)
+          for (let index = 0; index < commonLength; index++) {
+            const oldChild = oldChildren[index]
+            const newChild = newChildren[index]
+            patch(oldChild, newChild)
+          }
 
-      // array
-      const commonLength = Math.min(oldChildren.length, newChildren.length)
-      for (let index = 0; index < commonLength; index++) {
-        const oldChild = oldChildren[index]
-        const newChild = newChildren[index]
-        patch(oldChild, newChild)
-      }
-
-      // 删除节点
-      if (oldChildren.length > newChildren.length) {
-        console.log(oldChildren.length)
-        console.log(commonLength)
-        for (let index = commonLength; index < oldChildren.length; index++) {
-          console.log(index)
-          n1.el.removeChild(n1.el.children[index])
+          // 删除节点
+          if (oldChildren.length > newChildren.length) {
+            console.log(oldChildren.length)
+            console.log(commonLength)
+            for (let index = commonLength; index < oldChildren.length; index++) {
+              console.log(index)
+              n1.el.removeChild(n1.el.children[index])
+            }
+          }
+          // 新增节点
+          if (oldChildren.length < newChildren.length) {
+            newChildren.slice(commonLength).forEach((child) => {
+              mount(child, n1.el)
+            })
+          }
         }
-      }
-      // 新增节点
-      if (oldChildren.length < newChildren.length) {
-        newChildren.slice(commonLength).forEach((child) => {
-          mount(child, n1.el)
-        })
       }
     }
 
