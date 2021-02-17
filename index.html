@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>tiny-vue</title>
+  </head>
+  <style>
+    .red {
+      color: rosybrown;
+    }
+    .blue {
+      color: skyblue;
+    }
+  </style>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script>
+    function h(tag, props, children) {
+      return {
+        tag,
+        props,
+        children,
+      }
+    }
+    function mount(vnode, container) {
+      const el = document.createElement(vnode.tag)
+      vnode.el = el
+      if (vnode.props && typeof vnode.props === 'object') {
+        for (const [key, value] of Object.entries(vnode.props)) {
+          el.setAttribute(key, value)
+        }
+      }
+
+      if (vnode.children) {
+        // 这里只假设 vnode 只可能是字符串或者数组
+        if (typeof vnode.children === 'string') {
+          el.textContent = vnode.children
+        } else {
+          for (const child of vnode.children) {
+            mount(child, el)
+          }
+        }
+      }
+
+      container.appendChild(el)
+    }
+
+    function patch(n1, n2) {
+      if (n1.tag !== n2.tag) {
+        mount(n2, n1.el)
+        return
+      }
+
+      // props
+      const oldProps = n1.props || {}
+      const newProps = n2.props || {}
+      for (const key in newProps) {
+        const oldValue = oldProps[key]
+        const newValue = newProps[key]
+        if (oldValue !== newValue) {
+          n1.el.setAttribute(key, newValue)
+        }
+      }
+      for (const key in oldProps) {
+        if (!(key in newProps)) {
+          n1.el.removeAttribute(key)
+        }
+      }
+
+      // children
+      const oldChildren = n1.children || []
+      const newChildren = n2.children || []
+      // string
+      if (typeof oldChildren === 'string' && typeof newChildren === 'string') {
+        if (oldChildren !== newChildren) {
+          n1.el.textContent = newChildren
+        }
+        return
+      } else if (typeof oldChildren === 'string' && Array.isArray(newChildren)) {
+        n1.el.textContent = ''
+        newChildren.forEach((child) => {
+          moutn(child, n1.el)
+        })
+      } else if (Array.isArray(oldChildren) && typeof newChildren === 'string') {
+        n1.el.textContent = newChildren
+        n1.el.innerHTML = ''
+      }
+
+      // array
+      const commonLength = Math.min(oldChildren.length, newChildren.length)
+      for (let index = 0; index < commonLength; index++) {
+        const oldChild = oldChildren[index]
+        const newChild = newChildren[index]
+        patch(oldChild, newChild)
+      }
+
+      // 删除节点
+      if (oldChildren.length > newChildren.length) {
+        console.log(oldChildren.length)
+        console.log(commonLength)
+        for (let index = commonLength; index < oldChildren.length; index++) {
+          console.log(index)
+          n1.el.removeChild(n1.el.children[index])
+        }
+      }
+      // 新增节点
+      if (oldChildren.length < newChildren.length) {
+        newChildren.slice(commonLength).forEach((child) => {
+          mount(child, n1.el)
+        })
+      }
+    }
+
+    const vnode = h(
+      'div',
+      {
+        class: 'red',
+      },
+      [
+        h(
+          'span',
+          {
+            class: 'blue',
+          },
+          'hello'
+        ),
+        h(
+          'span',
+          {
+            class: 'blue',
+          },
+          'world!'
+        ),
+      ]
+    )
+
+    mount(vnode, document.getElementById('app'))
+
+    const vnode2 = h(
+      'div',
+      {
+        class: 'red',
+      },
+      [
+        h(
+          'span',
+          {
+            class: 'blue',
+          },
+          'hello'
+        ),
+        h(
+          'span',
+          {
+            class: 'blue',
+          },
+          ' world!'
+        ),
+        h(
+          'div',
+          {
+            class: 'blue',
+          },
+          'cool'
+        ),
+        h('div', null, [h('span', null, 'cooler')]),
+        h('div', null, [h('span', null, [h('span', null, 'coolest')])]),
+      ]
+    )
+
+    patch(vnode, vnode2)
+  </script>
+</html>
