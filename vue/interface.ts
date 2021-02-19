@@ -11,3 +11,7 @@ export interface VNode {
 export interface IComponent {
   render: () => VNode,
 }
+
+export interface IRef<T> {
+  value: T
+}

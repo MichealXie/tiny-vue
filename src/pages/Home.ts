@@ -15,8 +15,7 @@ watch(
   () => {
     return state.count
   },
-  // fixme: types
-  (newV: any, oldV: any) => {
+  (newV, oldV) => {
     state.count2 += 1
     console.log(`watch, value form ${oldV} changed to ${newV}`)
   }

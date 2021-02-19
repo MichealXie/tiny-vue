@@ -2,7 +2,8 @@ import { activeEffect } from './api'
 import { VNode } from './interface'
 import { isIntegerKey } from './util'
 
-// todo: 这里对于嵌套数据是怎么处理的?
+// Q: 这里对于嵌套数据是怎么处理的?
+// A: 因为是Map, key 都是对象, 不会重复, 方便的很
 export const targetMap: ITargetMap = new WeakMap()
 type IEffects = Set<Function>
 type IDepsMap = Map<any, IEffects>

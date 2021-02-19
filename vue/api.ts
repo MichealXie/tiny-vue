@@ -1,5 +1,5 @@
 import { mount, patch, track, trigger, watchMap } from "./index"
-import { IComponent, VNode } from "./interface"
+import { IComponent, IRef, VNode } from "./interface"
 
 export let activeEffect: Function | null = null
 
@@ -33,25 +33,31 @@ export function effect(fn: Function): void {
   activeEffect = null
 }
 
-export function watch(
-  sourceFn: Function,
-  cb: Function,
+export type WarchSource<T> = (() => T) | IRef<T>
+export type WatchCallback<V> = (
+  value: V,
+  oldValue: V,
+) => any
+
+export function watch<T>(
+  source: WarchSource<T>,
+  cb: WatchCallback<T>,
   option = {
     lazy: false,
   }
 ) {
   function setWatchMap() {
-    watchMap.set(sourceFn, {
-      res: sourceFn(),
+    watchMap.set(source, {
+      res: typeof source === 'function' ? source() : source,
       cb,
     })
   }
   function checker() {
-    const newRes = sourceFn()
-    const oldRes = watchMap.get(sourceFn).res
+    const newRes = typeof source === 'function' ? source() : source
+    const oldRes = watchMap.get(source).res as T
     console.log(newRes, oldRes)
     if (oldRes !== newRes) {
-      cb(newRes, oldRes)
+      cb(newRes as T, oldRes)
       setWatchMap()
     }
   }
@@ -62,9 +68,7 @@ export function watch(
 }
 
 
-export function ref<T>(v: T): {
-  value: T
-} {
+export function ref<T>(v: T): IRef<T> {
   let raw = v
   const res = {
     get value() {
@@ -80,8 +84,9 @@ export function ref<T>(v: T): {
   return res
 }
 
-export function computed(getter: Function) {
-  const res = ref(null)
+export function computed<T>(getter: () => T) {
+  const res = ref<T>(getter())
+  // todo: lazy
   effect(() => (res.value = getter()))
 
   return res
