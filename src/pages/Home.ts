@@ -2,6 +2,9 @@ import { computed, h, reactive, watch } from '../../vue/api'
 const state = reactive({
   count: 0,
   count2: 0,
+  nested: {
+    count: 0,
+  },
 })
 const countPlusOne = computed(() => {
   return state.count + 1
@@ -27,7 +30,7 @@ export const app = {
             state.count++
           },
         },
-        String(state.count)
+        `count: ${state.count}, count2: ${state.count2}`
       ),
       h(
         'div',
@@ -42,10 +45,10 @@ export const app = {
         'div',
         {
           onClick: () => {
-            state.count2++
+            state.nested.count++
           },
         },
-        String(state.count2)
+        `nested count: ${state.nested.count}`
       ),
     ])
   },

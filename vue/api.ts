@@ -6,8 +6,12 @@ export let activeEffect: Function | null = null
 export function reactive(value: any) {
   return new Proxy(value, {
     get(target, key, receiver) {
+      let res = Reflect.get(target, key, receiver)
+      if (typeof res === 'object' && res !== null) {
+        res = reactive(res)
+      }
       track(target, key)
-      return Reflect.get(target, key, receiver)
+      return res
     },
     set(target, key, value, receiver) {
       // fixme: set 的时候也应该触发 track?
