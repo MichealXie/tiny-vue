@@ -15,6 +15,83 @@
     <div id="app"></div>
   </body>
   <script>
+    const targetMap = new WeakMap()
+    let activeEffect = null
+
+    function track(target, key) {
+      let depsMap = targetMap.get(target)
+      if (!depsMap) {
+        depsMap = new Map()
+        targetMap.set(target, depsMap)
+      }
+      let deps = depsMap.get(key)
+      if (!deps) {
+        deps = new Set()
+        depsMap.set(key, deps)
+      }
+
+      if (activeEffect) deps.add(activeEffect)
+    }
+
+    function trigger(target, key) {
+      targetMap
+        .get(target)
+        ?.get(key)
+        ?.forEach((effect) => {
+          effect()
+        })
+    }
+
+    function reactive(value) {
+      return new Proxy(value, {
+        get(target, key, receiver) {
+          track(target, key)
+          return target[key]
+          // return Reflect.get(target, key, receiver)
+        },
+        set(target, key, value, receiver) {
+          // fixme: set 的时候也应该触发 track?
+          const oldValue = Reflect.get(target, key)
+          Reflect.set(target, key, value, receiver)
+
+          if (oldValue !== value) {
+            trigger(target, key)
+          }
+
+          return value
+        },
+      })
+    }
+
+    function effect(fn) {
+      activeEffect = fn
+      fn()
+      activeEffect = null
+    }
+
+    function ref(v) {
+      let raw = v
+      const res = {
+        get value() {
+          track(res, 'value')
+          return raw
+        },
+        set value(newV) {
+          if (newV === raw) return
+          raw = newV
+          trigger(res, 'value')
+        },
+      }
+      return res
+    }
+
+    function computed(getter) {
+      const res = ref < any > null
+      effect(() => (res.value = getter()))
+
+      return res
+    }
+
     function h(tag, props, children) {
       return {
         tag,
@@ -27,7 +104,11 @@
       vnode.el = el
       if (vnode.props && typeof vnode.props === 'object') {
         for (const [key, value] of Object.entries(vnode.props)) {
-          el.setAttribute(key, value)
+          if (key.startsWith('on')) {
+            el.addEventListener(key.slice(2).toLowerCase(), value)
+          } else {
+            el.setAttribute(key, value)
+          }
         }
       }
 
@@ -46,6 +127,7 @@
     }
 
     function patch(n1, n2) {
+      n2.el = n1.el
       if (n1.tag !== n2.tag) {
         mount(n2, n1.el)
         return
@@ -115,63 +197,98 @@
       }
     }
 
-    const vnode = h(
-      'div',
-      {
-        class: 'red',
-      },
-      [
-        h(
-          'span',
-          {
-            class: 'blue',
-          },
-          'hello'
-        ),
-        h(
-          'span',
-          {
-            class: 'blue',
-          },
-          'world!'
-        ),
-      ]
-    )
-
-    mount(vnode, document.getElementById('app'))
-
-    const vnode2 = h(
-      'div',
-      {
-        class: 'red',
-      },
-      [
-        h(
-          'span',
-          {
-            class: 'blue',
-          },
-          'hello'
-        ),
-        h(
-          'span',
-          {
-            class: 'blue',
-          },
-          ' world!'
-        ),
-        h(
+    const app = {
+      data: reactive({
+        count: 0,
+      }),
+      render() {
+        return h(
           'div',
           {
-            class: 'blue',
+            onClick: () => {
+              console.log(this.data.count)
+              this.data.count++
+            },
           },
-          'cool'
-        ),
-        h('div', null, [h('span', null, 'cooler')]),
-        h('div', null, [h('span', null, [h('span', null, 'coolest')])]),
-      ]
-    )
+          String(this.data.count)
+        )
+      },
+    }
 
-    patch(vnode, vnode2)
+    function mountApp(app, container) {
+      let isMounted = false
+      let oldVnode
+      effect(() => {
+        if (!isMounted) {
+          oldVnode = app.render()
+          mount(oldVnode, container)
+          isMounted = true
+        } else {
+          newVnode = app.render()
+          patch(oldVnode, newVnode)
+          oldVnode = newVnode 
+        }
+      })
+    }
+
+    mountApp(app, document.getElementById('app'))
+    // const vnode = h(
+    //   'div',
+    //   {
+    //     class: 'red',
+    //   },
+    //   [
+    //     h(
+    //       'span',
+    //       {
+    //         class: 'blue',
+    //       },
+    //       'hello'
+    //     ),
+    //     h(
+    //       'span',
+    //       {
+    //         class: 'blue',
+    //       },
+    //       'world!'
+    //     ),
+    //   ]
+    // )
+
+    // mount(vnode, document.getElementById('app'))
+
+    // const vnode2 = h(
+    //   'div',
+    //   {
+    //     class: 'red',
+    //   },
+    //   [
+    //     h(
+    //       'span',
+    //       {
+    //         class: 'blue',
+    //       },
+    //       'hello'
+    //     ),
+    //     h(
+    //       'span',
+    //       {
+    //         class: 'blue',
+    //       },
+    //       ' world!'
+    //     ),
+    //     h(
+    //       'div',
+    //       {
+    //         class: 'blue',
+    //       },
+    //       'cool'
+    //     ),
+    //     h('div', null, [h('span', null, 'cooler')]),
+    //     h('div', null, [h('span', null, [h('span', null, 'coolest')])]),
+    //   ]
+    // )
+
+    // patch(vnode, vnode2)
   </script>
 </html>
