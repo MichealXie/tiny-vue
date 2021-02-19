@@ -1,7 +1,12 @@
-import { activeEffect } from "./api"
-import { VNode } from "./interface"
+import { activeEffect } from './api'
+import { VNode } from './interface'
+import { isIntegerKey } from './util'
 
-export const targetMap: WeakMap<object, Map<any, Set<Function>>> = new WeakMap()
+// todo: 这里对于嵌套数据是怎么处理的?
+export const targetMap: ITargetMap = new WeakMap()
+type IEffects = Set<Function>
+type IDepsMap = Map<any, IEffects>
+type ITargetMap = WeakMap<object, IDepsMap>
 export const watchMap = new Map()
 
 export function track(target: object, key: string | symbol | number) {
@@ -19,8 +24,30 @@ export function track(target: object, key: string | symbol | number) {
   if (activeEffect) deps.add(activeEffect)
 }
 
+function checkArray(target: any, key: string | symbol | number, depsMap: IDepsMap) {
+  const isArray = Array.isArray(target)
+  // 数组的改动需要监听长度变化
+  if (isArray && isIntegerKey(key)) {
+    const lengthChangeEffects = targetMap.get(target)?.get('length')
+
+    if (lengthChangeEffects) {
+      lengthChangeEffects.forEach((effectToAdd) => {
+        let deps = depsMap.get(key)
+        if (!deps) {
+          deps = new Set()
+          depsMap.set(key, deps)
+        }
+        deps.add(effectToAdd)
+      })
+    }
+  }
+}
 export function trigger(target: any, key: string | symbol | number) {
-  targetMap.get(target)?.get(key)?.forEach(effect => {
+  const depsMap = targetMap.get(target)
+  if (!depsMap) return
+  checkArray(target, key, depsMap)
+
+  depsMap.get(key)?.forEach((effect) => {
     effect()
   })
 }

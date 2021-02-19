@@ -3,7 +3,7 @@ import { IComponent, VNode } from "./interface"
 
 export let activeEffect: Function | null = null
 
-export function reactive(value: any) {
+export function reactive<T extends object>(value: T) {
   return new Proxy(value, {
     get(target, key, receiver) {
       let res = Reflect.get(target, key, receiver)
@@ -87,6 +87,7 @@ export function computed(getter: Function) {
   return res
 }
 
+// todo: children 支持数组里字符串与 vnode 混用
 export function h(tag: VNode['tag'], props: VNode["props"], children?: VNode["children"]): Omit<VNode, 'el'> {
   return {
     tag,
@@ -98,6 +99,8 @@ export function h(tag: VNode['tag'], props: VNode["props"], children?: VNode["ch
 export function mountApp(app: IComponent , container: HTMLElement) {
   let isMounted = false
   let oldVnode: VNode
+  // NOTE: 目前全局更新的所有 effect 都来自于这个...
+  // 有没有针对组件级别的 effect 呢?
   effect(() => {
     if (!isMounted) {
       oldVnode = app.render()

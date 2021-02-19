@@ -5,6 +5,7 @@ const state = reactive({
   nested: {
     count: 0,
   },
+  array: [1,2]
 })
 const countPlusOne = computed(() => {
   return state.count + 1
@@ -49,6 +50,21 @@ export const app = {
           },
         },
         `nested count: ${state.nested.count}`
+      ),
+      h(
+        'div',
+        {
+          onClick: () => {
+            state.array.push(1)
+            console.log(state.array)
+          },
+        },
+        [
+          h('div', null, '下面是数组类型: 点击添加'),
+          ...state.array.map(item => {
+            return h('div', null, `${item}`)
+          })
+        ]
       ),
     ])
   },
