@@ -69,6 +69,35 @@
       activeEffect = null
     }
 
+    const watchMap = new Map()
+    function watch(
+      sourceFn,
+      cb,
+      option = {
+        lazy: false,
+      }
+    ) {
+      function setWatchMap() {
+        watchMap.set(sourceFn, {
+          res: sourceFn(),
+          cb,
+        })
+      }
+      function checker() {
+        const newRes = sourceFn()
+        const oldRes = watchMap.get(sourceFn).res
+        console.log(newRes, oldRes)
+        if (oldRes !== newRes) {
+          cb(newRes, oldRes)
+          setWatchMap()
+        }
+      }
+      if (!option.lazy) {
+        setWatchMap()
+      }
+      effect(checker)
+    }
+
     function ref(v) {
       let raw = v
       const res = {
@@ -200,17 +229,23 @@
     const app = {
       data: reactive({
         count: 0,
+        count2: 0,
       }),
       render() {
         return h(
           'div',
-          {
-            onClick: () => {
-              console.log(this.data.count)
-              this.data.count++
-            },
-          },
-          String(this.data.count)
+          null,[
+            h('div', {
+              onClick: () => {
+                  this.data.count++
+              },
+            }, String(this.data.count)),
+            h('div', {
+              onClick: () => {
+                  this.data.count2++
+              },
+            },String(this.data.count2))
+          ]
         )
       },
     }
@@ -226,12 +261,22 @@
         } else {
           newVnode = app.render()
           patch(oldVnode, newVnode)
-          oldVnode = newVnode 
+          oldVnode = newVnode
         }
       })
     }
 
     mountApp(app, document.getElementById('app'))
+
+    watch(
+      () => {
+        return app.data.count
+      },
+      (newV, oldV) => {
+        app.data.count2 += 1
+        // console.log(newV, oldV)
+      }
+    )
     // const vnode = h(
     //   'div',
     //   {
