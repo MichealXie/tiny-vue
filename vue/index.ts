@@ -1,14 +1,15 @@
 import { activeEffect } from './api'
-import { VNode } from './interface'
+import { IEffect, VNode } from './interface'
 import { isIntegerKey } from './util'
 
 // Q: 这里对于嵌套数据是怎么处理的?
 // A: 因为是Map, key 都是对象, 不会重复, 方便的很
 export const targetMap: ITargetMap = new WeakMap()
-type IEffects = Set<Function>
+type IEffects = Set<IEffect>
 type IDepsMap = Map<any, IEffects>
 type ITargetMap = WeakMap<object, IDepsMap>
 export const watchMap = new Map()
+const schedulerQueue: Set<Function> = new Set()
 
 export function track(target: object, key: string | symbol | number) {
   let depsMap = targetMap.get(target)
@@ -49,7 +50,19 @@ export function trigger(target: any, key: string | symbol | number) {
   checkArray(target, key, depsMap)
 
   depsMap.get(key)?.forEach((effect) => {
-    effect()
+    if (effect.option?.scheduler) {
+      schedulerQueue.add(effect.option.scheduler)
+    } else {
+      schedulerQueue.add(effect)
+    }
+  })
+
+  // fixme: 应该有个更好的时机触发, 这里硬生生的写不好
+  Promise.resolve().then(() => {
+    schedulerQueue.forEach(job => {
+      job()
+      schedulerQueue.delete(job)
+    })
   })
 }
 
@@ -137,10 +150,7 @@ export function patch(n1: VNode, n2: VNode) {
 
       // 删除节点
       if (oldChildren.length > newChildren.length) {
-        console.log(oldChildren.length)
-        console.log(commonLength)
         for (let index = commonLength; index < oldChildren.length; index++) {
-          console.log(index)
           n1.el.removeChild(n1.el.children[index])
         }
       }
@@ -152,4 +162,18 @@ export function patch(n1: VNode, n2: VNode) {
       }
     }
   }
+}
+
+
+
+export function createEffect<T = any>(fn: () => T, option: IEffect<T>["option"]): IEffect<T> {
+  const effect = function reactiveEffect() {
+    return fn()
+  } as unknown as IEffect<T>
+
+  effect.raw = fn
+  effect.option = option
+  effect._isEffect = true
+
+  return effect
 }

@@ -15,3 +15,15 @@ export interface IComponent {
 export interface IRef<T> {
   value: T
 }
+
+export interface IEffectOption {
+  lazy?: boolean
+  scheduler?: (fn: IEffect) => any,
+}
+
+export interface IEffect<T = any> {
+  (): T
+  raw: () => T
+  _isEffect: true
+  option?: IEffectOption
+}

@@ -1,7 +1,7 @@
-import { mount, patch, track, trigger, watchMap } from "./index"
-import { IComponent, IRef, VNode } from "./interface"
+import { createEffect, mount, patch, track, trigger, watchMap } from './index'
+import { IComponent, IEffect, IEffectOption, IRef, VNode } from './interface'
 
-export let activeEffect: Function | null = null
+export let activeEffect: IEffect<any> | null = null
 
 export function reactive<T extends object>(value: T) {
   return new Proxy(value, {
@@ -27,17 +27,26 @@ export function reactive<T extends object>(value: T) {
   })
 }
 
-export function effect(fn: Function): void {
-  activeEffect = fn
-  fn()
+export function effect<T = any>(
+  fn: () => T,
+  option: IEffectOption = {
+    lazy: false,
+  }
+) {
+  const e = createEffect<T>(fn, option)
+  activeEffect = e 
+
+  if (!option.lazy) {
+    fn()
+  }
+
   activeEffect = null
+
+  return e
 }
 
 export type WarchSource<T> = (() => T) | IRef<T>
-export type WatchCallback<V> = (
-  value: V,
-  oldValue: V,
-) => any
+export type WatchCallback<V> = (value: V, oldValue: V) => any
 
 export function watch<T>(
   source: WarchSource<T>,
@@ -55,7 +64,6 @@ export function watch<T>(
   function checker() {
     const newRes = typeof source === 'function' ? source() : source
     const oldRes = watchMap.get(source).res as T
-    console.log(newRes, oldRes)
     if (oldRes !== newRes) {
       cb(newRes as T, oldRes)
       setWatchMap()
@@ -66,7 +74,6 @@ export function watch<T>(
   }
   effect(checker)
 }
-
 
 export function ref<T>(v: T): IRef<T> {
   let raw = v
@@ -84,16 +91,44 @@ export function ref<T>(v: T): IRef<T> {
   return res
 }
 
-export function computed<T>(getter: () => T) {
-  const res = ref<T>(getter())
-  // todo: lazy
-  effect(() => (res.value = getter()))
+class Computed<T> {
+  _isDirty = false
+  _value: T
+  _effect: IEffect<T>
 
-  return res
+  constructor(getter: () => T) {
+    this._effect = effect<T>(getter, {
+      lazy: false,
+      // NOTE: scheduler 在这里不是传统意义上的下一波批处理, 而是作为一个与传入函数无关的 effect 替代
+      scheduler: () => {
+        if (!this._isDirty) {
+          this._isDirty = true
+          trigger(this, 'value')
+        }
+      },
+    })
+    this._value = getter()
+  }
+  get value() {
+    if (this._isDirty) {
+      this._value = this._effect()
+      this._isDirty = false
+    }
+    track(this, 'value')
+    return this._value
+  }
+}
+
+export function computed<T>(getter: () => T) {
+  return new Computed(getter)
 }
 
 // todo: children 支持数组里字符串与 vnode 混用
-export function h(tag: VNode['tag'], props: VNode["props"], children?: VNode["children"]): Omit<VNode, 'el'> {
+export function h(
+  tag: VNode['tag'],
+  props: VNode['props'],
+  children?: VNode['children']
+): Omit<VNode, 'el'> {
   return {
     tag,
     props,
@@ -101,7 +136,7 @@ export function h(tag: VNode['tag'], props: VNode["props"], children?: VNode["ch
   }
 }
 
-export function mountApp(app: IComponent , container: HTMLElement) {
+export function mountApp(app: IComponent, container: HTMLElement) {
   let isMounted = false
   let oldVnode: VNode
   // NOTE: 目前全局更新的所有 effect 都来自于这个...

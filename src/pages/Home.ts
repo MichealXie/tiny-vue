@@ -8,7 +8,7 @@ const state = reactive({
   array: [1,2]
 })
 const countPlusOne = computed(() => {
-  return state.count + 1
+  return state.count + state.count2
 })
 
 watch(
@@ -17,7 +17,6 @@ watch(
   },
   (newV, oldV) => {
     state.count2 += 1
-    console.log(`watch, value form ${oldV} changed to ${newV}`)
   }
 )
 export const app = {
@@ -55,7 +54,6 @@ export const app = {
         {
           onClick: () => {
             state.array.push(1)
-            console.log(state.array)
           },
         },
         [
