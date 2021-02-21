@@ -7,7 +7,11 @@ export default defineComponent({
     count: Number,
     totalCount: Object as unknown as IRef<Number>,
   },
-  render(state) {
+  render(state, _ctx) {
+    console.log(_ctx)
+    
+    console.log('render')
+    
     return h(
       'div',
       null,

@@ -1,7 +1,9 @@
-import { activeEffect } from './api'
-import { IEffect, VNode } from './interface'
+import { IDefineComponent, IEffect, VNode } from './interface'
 import { isIntegerKey } from './util'
 
+let currentInstance: IDefineComponent | null = null
+
+export let activeEffect: IEffect<any> | null = null
 // Q: 这里对于嵌套数据是怎么处理的?
 // A: 因为是Map, key 都是对象, 不会重复, 方便的很
 export const targetMap: ITargetMap = new WeakMap()
@@ -44,10 +46,12 @@ function checkArray(target: any, key: string | symbol | number, depsMap: IDepsMa
     }
   }
 }
+
 export function trigger(target: any, key: string | symbol | number) {
   const depsMap = targetMap.get(target)
   if (!depsMap) return
-  checkArray(target, key, depsMap)
+  checkArray(target, key, depsMap);
+  
 
   depsMap.get(key)?.forEach((effect) => {
     if (effect.option?.scheduler) {
@@ -56,7 +60,9 @@ export function trigger(target: any, key: string | symbol | number) {
       schedulerQueue.add(effect)
     }
   })
+  
 
+  // fixme: trigger 会重复触发多次
   // fixme: 应该有个更好的时机触发, 这里硬生生的写不好
   Promise.resolve().then(() => {
     schedulerQueue.forEach((job) => {
@@ -66,6 +72,14 @@ export function trigger(target: any, key: string | symbol | number) {
   })
 }
 
+export function mountComponent(comp: IDefineComponent, container: HTMLElement) {
+  comp._ctx = comp.setup?.()
+  setCurrentInstance(comp)
+  const vnode = comp.render(comp.props, comp._ctx)
+  mount(vnode, container)
+
+  return vnode
+}
 // todo: life cycle function
 // todo: 声明 currentInstace, 来附加 life cycle function
 export function mount(vnode: VNode, container: HTMLElement) {
@@ -179,9 +193,16 @@ export function patch(n1: VNode, n2: VNode) {
   }
 }
 
+const effectStack: IEffect[] = []
 export function createEffect<T = any>(fn: () => T, option: IEffect<T>['option']): IEffect<T> {
   const effect = (function reactiveEffect() {
-    return fn()
+    effectStack.push(effect)
+    activeEffect = effect
+    const res = fn()
+    effectStack.pop()
+    activeEffect = effectStack[effectStack.length - 1]
+
+    return res
   } as unknown) as IEffect<T>
 
   effect.raw = fn
@@ -189,4 +210,16 @@ export function createEffect<T = any>(fn: () => T, option: IEffect<T>['option'])
   effect._isEffect = true
 
   return effect
+}
+
+export function getCurrentInstance() {
+  return currentInstance 
+}
+
+export function setCurrentInstance(instance: IDefineComponent | null) {
+  console.log('instance')
+  
+  console.log(instance)
+  
+  currentInstance = instance
 }

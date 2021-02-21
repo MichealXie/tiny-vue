@@ -1,7 +1,5 @@
-import { createEffect, mount, patch, track, trigger, watchMap } from './index'
-import { IDefineComponentArg, IEffect, IEffectOption, IRef, VNode } from './interface'
-
-export let activeEffect: IEffect<any> | null = null
+import { createEffect, getCurrentInstance, mount, mountComponent, patch, track, trigger, watchMap } from './index'
+import { IDefineComponent, IEffect, IEffectOption, IRef, VNode } from './interface'
 
 export function reactive<T extends object>(value: T) {
   return new Proxy(value, {
@@ -34,13 +32,11 @@ export function effect<T = any>(
   }
 ) {
   const e = createEffect<T>(fn, option)
-  activeEffect = e 
 
+  // fixme: lazy 无效
   if (!option.lazy) {
-    fn()
+    e()
   }
-
-  activeEffect = null
 
   return e
 }
@@ -125,14 +121,15 @@ export function computed<T>(getter: () => T) {
 
 // todo: children 支持数组里字符串与 vnode 混用
 export function h(
-  tag: string | IDefineComponentArg,
+  tag: string | IDefineComponent,
   props: VNode['props'],
-  children?: VNode['children']
+  children?: VNode['children'],
 ): Omit<VNode, 'el'> {
   let type: string | VNode
   // todo: make tag -> vnode && rename
   if (typeof tag !== 'string') {
-    type = tag.render(props?.props)
+    const renderRes = tag.render(props?.props, getCurrentInstance()?._ctx)
+    type = mountComponent(tag, renderRes.el)
   } else {
     type = tag
   }
@@ -144,21 +141,23 @@ export function h(
 }
 
 // just for type
-export function defineComponent(comp: IDefineComponentArg) {
+export function defineComponent(comp: IDefineComponent) {
+  console.log('defineComponent')
   return comp
 }
-export function mountApp(app: IDefineComponentArg , container: HTMLElement) {
+export function mountApp(app: IDefineComponent , container: HTMLElement) {
   let isMounted = false
   let oldVnode: VNode
   // NOTE: 目前全局更新的所有 effect 都来自于这个...
   // 有没有针对组件级别的 effect 呢?
   effect(() => {
     if (!isMounted) {
-      oldVnode = app.render()
-      mount(oldVnode, container)
+      // fixme: setup should only be called once
+      
+      oldVnode = mountComponent(app, container)
       isMounted = true
     } else {
-      const newVnode = app.render()
+      const newVnode = app.render(app.props, app._ctx)
       patch(oldVnode, newVnode)
       oldVnode = newVnode
     }

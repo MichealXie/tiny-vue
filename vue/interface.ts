@@ -9,6 +9,7 @@ export interface IProps {
 export interface VNode {
   type: string | VNode,
   el?: HTMLElement
+  _ctx?: any
   // todo: 改名
   props?: IProps | null,
   children?: VNode[] | string
@@ -29,12 +30,14 @@ export interface IEffect<T = any> {
   _isEffect: true
   option?: IEffectOption
 }
-export interface IDefineComponentArg {
+export interface IDefineComponent {
   props?: {
     [key: string]: any
   },
-  render: (state?: any) => VNode
-  setup?: (props?: IProps["props"]) => Object,
+  render: (props?: any, _ctx?: any) => VNode
+  setup?: (props?: IProps["props"]) => any,
+  // todo: type 如何串联起来呢?
+  _ctx?: any,
   name?: string,
   // 因为直接用的 render function, 这个参数就不需要了
   // 假如需要, name 来 map components 的 key, 再换出 VNode
