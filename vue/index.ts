@@ -66,6 +66,8 @@ export function trigger(target: any, key: string | symbol | number) {
   })
 }
 
+// todo: life cycle function
+// todo: 声明 currentInstace, 来附加 life cycle function
 export function mount(vnode: VNode, container: HTMLElement) {
   let el: HTMLElement
   if (typeof vnode.type === 'string') {

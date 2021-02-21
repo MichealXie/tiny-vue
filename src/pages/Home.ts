@@ -1,4 +1,5 @@
 import { computed, h, reactive, watch } from '../../vue/api'
+import child from '../components/child'
 const state = reactive({
   count: 0,
   count2: 0,
@@ -21,25 +22,6 @@ watch(
 )
 // todo: 添加 defineComponent, 以支持类型提示
 // todo: 支持 setup, 以及 props 传递
-const child = {
-  render() {
-    return h(
-      'div',
-      null,
-      [
-        h(
-          'div',
-          {
-            onClick: () => {
-              state.count++
-            },
-          },
-          `totalCount is ${totalCount.value}`
-        ),
-      ]
-    )
-  }
-}
 export const app = {
   render() {
     return h('div', null, [
@@ -61,7 +43,12 @@ export const app = {
         },
         `nested count: ${state.nested.count}`
       ),
-      h(child, null),
+      h(child, {
+        props: {
+          count: state.count,
+          totalCount,
+        }
+      }),
       h(
         'div',
         {

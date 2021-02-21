@@ -1,5 +1,5 @@
 import { createEffect, mount, patch, track, trigger, watchMap } from './index'
-import { IComponent, IEffect, IEffectOption, IRef, VNode } from './interface'
+import { IDefineComponentArg, IEffect, IEffectOption, IRef, VNode } from './interface'
 
 export let activeEffect: IEffect<any> | null = null
 
@@ -125,14 +125,14 @@ export function computed<T>(getter: () => T) {
 
 // todo: children 支持数组里字符串与 vnode 混用
 export function h(
-  tag: string | IComponent,
+  tag: string | IDefineComponentArg,
   props: VNode['props'],
   children?: VNode['children']
 ): Omit<VNode, 'el'> {
   let type: string | VNode
   // todo: make tag -> vnode && rename
   if (typeof tag !== 'string') {
-    type = tag.render()
+    type = tag.render(props?.props)
   } else {
     type = tag
   }
@@ -143,7 +143,11 @@ export function h(
   }
 }
 
-export function mountApp(app: IComponent, container: HTMLElement) {
+// just for type
+export function defineComponent(comp: IDefineComponentArg) {
+  return comp
+}
+export function mountApp(app: IDefineComponentArg , container: HTMLElement) {
   let isMounted = false
   let oldVnode: VNode
   // NOTE: 目前全局更新的所有 effect 都来自于这个...
