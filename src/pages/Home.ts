@@ -7,8 +7,8 @@ const state = reactive({
   },
   array: [1,2]
 })
-const countPlusOne = computed(() => {
-  return state.count + state.count2
+const totalCount = computed(() => {
+  return state.count + state.count2 + state.nested.count
 })
 
 watch(
@@ -19,6 +19,27 @@ watch(
     state.count2 += 1
   }
 )
+// todo: 添加 defineComponent, 以支持类型提示
+// todo: 支持 setup, 以及 props 传递
+const child = {
+  render() {
+    return h(
+      'div',
+      null,
+      [
+        h(
+          'div',
+          {
+            onClick: () => {
+              state.count++
+            },
+          },
+          `totalCount is ${totalCount.value}`
+        ),
+      ]
+    )
+  }
+}
 export const app = {
   render() {
     return h('div', null, [
@@ -35,20 +56,12 @@ export const app = {
         'div',
         {
           onClick: () => {
-            state.count++
-          },
-        },
-        `plusOne is ${countPlusOne.value}`
-      ),
-      h(
-        'div',
-        {
-          onClick: () => {
             state.nested.count++
           },
         },
         `nested count: ${state.nested.count}`
       ),
+      h(child, null),
       h(
         'div',
         {

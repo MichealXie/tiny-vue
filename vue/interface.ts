@@ -2,7 +2,7 @@ export interface stringObj {
   [key: string]: any
 }
 export interface VNode {
-  tag: string,
+  type: string | VNode,
   el?: HTMLElement
   props?: stringObj | null,
   children?: VNode[] | string

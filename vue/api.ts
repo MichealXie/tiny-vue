@@ -125,12 +125,19 @@ export function computed<T>(getter: () => T) {
 
 // todo: children 支持数组里字符串与 vnode 混用
 export function h(
-  tag: VNode['tag'],
+  tag: string | IComponent,
   props: VNode['props'],
   children?: VNode['children']
 ): Omit<VNode, 'el'> {
+  let type: string | VNode
+  // todo: make tag -> vnode && rename
+  if (typeof tag !== 'string') {
+    type = tag.render()
+  } else {
+    type = tag
+  }
   return {
-    tag,
+    type,
     props,
     children,
   }

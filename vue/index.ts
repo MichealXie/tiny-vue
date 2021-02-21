@@ -59,7 +59,7 @@ export function trigger(target: any, key: string | symbol | number) {
 
   // fixme: 应该有个更好的时机触发, 这里硬生生的写不好
   Promise.resolve().then(() => {
-    schedulerQueue.forEach(job => {
+    schedulerQueue.forEach((job) => {
       job()
       schedulerQueue.delete(job)
     })
@@ -67,7 +67,12 @@ export function trigger(target: any, key: string | symbol | number) {
 }
 
 export function mount(vnode: VNode, container: HTMLElement) {
-  const el = document.createElement(vnode.tag)
+  let el: HTMLElement
+  if (typeof vnode.type === 'string') {
+    el = document.createElement(vnode.type)
+  } else {
+    el = mount(vnode.type, container).el!
+  }
   vnode.el = el
   if (vnode.props && typeof vnode.props === 'object') {
     for (const [key, value] of Object.entries(vnode.props)) {
@@ -91,16 +96,24 @@ export function mount(vnode: VNode, container: HTMLElement) {
   }
 
   container.appendChild(el)
+
+  return vnode
 }
 
 export function patch(n1: VNode, n2: VNode) {
   if (!n1.el) {
     throw new Error(`!n1.el`)
   }
+
   n2.el = n1.el
-  if (n1.tag !== n2.tag) {
-    mount(n2, n1.el)
-    return
+
+  if (typeof n1.type === 'string' && typeof n2.type === 'string') {
+    if (n1.type !== n2.type) {
+      mount(n2, n1.el)
+      return
+    }
+  } else {
+    patch(n1.type as VNode, n2.type as VNode)
   }
 
   // props
@@ -164,12 +177,10 @@ export function patch(n1: VNode, n2: VNode) {
   }
 }
 
-
-
-export function createEffect<T = any>(fn: () => T, option: IEffect<T>["option"]): IEffect<T> {
-  const effect = function reactiveEffect() {
+export function createEffect<T = any>(fn: () => T, option: IEffect<T>['option']): IEffect<T> {
+  const effect = (function reactiveEffect() {
     return fn()
-  } as unknown as IEffect<T>
+  } as unknown) as IEffect<T>
 
   effect.raw = fn
   effect.option = option
