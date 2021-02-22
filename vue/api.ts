@@ -1,5 +1,5 @@
 import { createEffect, mount, patch, track, trigger, watchMap } from './index'
-import { IDefineComponentArg, IEffect, IEffectOption, IRef, VNode } from './interface'
+import { IComponent, IEffect, IEffectOption, IRef, VNode } from './interface'
 
 export let activeEffect: IEffect<any> | null = null
 
@@ -125,7 +125,7 @@ export function computed<T>(getter: () => T) {
 
 // todo: children 支持数组里字符串与 vnode 混用
 export function h(
-  tag: string | IDefineComponentArg,
+  tag: string | IComponent,
   props: VNode['props'],
   children?: VNode['children']
 ): Omit<VNode, 'el'> {
@@ -144,17 +144,19 @@ export function h(
 }
 
 // just for type
-export function defineComponent(comp: IDefineComponentArg) {
+export function defineComponent(comp: IComponent) {
   return comp
 }
-export function mountApp(app: IDefineComponentArg , container: HTMLElement) {
+export function mountApp(app: IComponent , container: HTMLElement) {
   let isMounted = false
   let oldVnode: VNode
+  let instance: IInstance
   // NOTE: 目前全局更新的所有 effect 都来自于这个...
   // 有没有针对组件级别的 effect 呢?
   effect(() => {
     if (!isMounted) {
-      oldVnode = app.render()
+      // oldVnode = app.render()
+
       mount(oldVnode, container)
       isMounted = true
     } else {

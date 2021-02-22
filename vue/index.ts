@@ -1,5 +1,5 @@
 import { activeEffect } from './api'
-import { IEffect, VNode } from './interface'
+import { IComponent, IEffect, VNode } from './interface'
 import { isIntegerKey } from './util'
 
 // Q: 这里对于嵌套数据是怎么处理的?
@@ -66,9 +66,13 @@ export function trigger(target: any, key: string | symbol | number) {
   })
 }
 
+
 // todo: life cycle function
 // todo: 声明 currentInstace, 来附加 life cycle function
 export function mount(vnode: VNode, container: HTMLElement) {
+  if (typeof vnode.type === 'string') {
+    patch(null, vnode, container)
+  }
   let el: HTMLElement
   if (typeof vnode.type === 'string') {
     el = document.createElement(vnode.type)
@@ -102,16 +106,10 @@ export function mount(vnode: VNode, container: HTMLElement) {
   return vnode
 }
 
-export function patch(n1: VNode, n2: VNode) {
-  if (!n1.el) {
-    throw new Error(`!n1.el`)
-  }
-
-  n2.el = n1.el
-
+export function patch(n1: VNode, n2: VNode, container: HTMLElement, parentComponent: IComponent) {
   if (typeof n1.type === 'string' && typeof n2.type === 'string') {
     if (n1.type !== n2.type) {
-      mount(n2, n1.el)
+      mount(n2, n2.el)
       return
     }
   } else {

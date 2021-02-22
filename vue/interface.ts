@@ -29,7 +29,7 @@ export interface IEffect<T = any> {
   _isEffect: true
   option?: IEffectOption
 }
-export interface IDefineComponentArg {
+export interface IComponent {
   props?: {
     [key: string]: any
   },
@@ -41,4 +41,10 @@ export interface IDefineComponentArg {
   // components: {
   //   [key: string]: IDefineComponentArg
   // },
+}
+
+
+export interface IInstance {
+  vnode: VNode
+  parent: IComponent
 }
